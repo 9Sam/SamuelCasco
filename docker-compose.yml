@@ -1,0 +1,21 @@
+services:
+  backend-api:
+    build: ./backend
+    container_name: devsu-api
+    ports:
+      - "3002:3002"
+    networks:
+      - devsu-network
+  frontend:
+    build: ./frontend
+    container_name: devsu-angular
+    ports: 
+      - "80:80"
+    depends_on:
+      - backend-api
+    networks:
+      - devsu-network
+
+networks:
+  devsu-network:
+    driver: bridge

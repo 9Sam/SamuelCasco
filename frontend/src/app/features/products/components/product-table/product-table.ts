@@ -33,7 +33,7 @@ import { Router } from '@angular/router';
           @for (product of displayedProducts(); track product.id) {
             <tr>
               <td>
-                <img [src]="product.logo" [alt]="product.name" width="48" />
+                <img [src]="'svgs/logo-icon.svg'" [alt]="product.name" width="48" />
               </td>
               <td>{{ product.name }}</td>
               <td>{{ product.description }}</td>
@@ -42,7 +42,7 @@ import { Router } from '@angular/router';
               <td>
                 <app-actions-btn
                   (selectedAction)="onAction($event)"
-                  [buttonId]="product.id"
+                  [buttonId]="product.id!"
                 ></app-actions-btn>
               </td>
             </tr>
@@ -148,7 +148,5 @@ export class ProductTable {
     });
   }
 
-  onDelete(productId: string) {
-
-  }
+  onDelete(productId: string) {}
 }

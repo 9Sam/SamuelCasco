@@ -1,16 +1,21 @@
-import { Component, inject, OnInit } from '@angular/core';
-import { FormBuilder, Validators } from '@angular/forms';
+import { Component, inject, OnInit, signal } from '@angular/core';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Button } from '@app/shared/components/button/button';
 import { ProductService } from '../../services/product.service';
-import { map } from 'rxjs';
+import { map, single } from 'rxjs';
+import { CommonModule } from '@angular/common';
+import { productFields } from './utils/product-fields';
+import { getErrorMessage } from './utils/error-handler';
+import { productIdAsyncValidator } from './validators/product.validator';
+import { futureDateValidator } from './validators/release-date.validator';
 
 @Component({
   selector: 'app-product',
-  imports: [Button],
+  imports: [Button, CommonModule, ReactiveFormsModule],
   template: `
     <div class="product-form">
-      <form class="form">
+      <form [formGroup]="productForm" class="form">
         <div class="form-header">
           <h1>Formulario de registro</h1>
         </div>
@@ -18,17 +23,17 @@ import { map } from 'rxjs';
         <div class="form-body">
           @for (field of fields; track field.id) {
             <div>
-              <label [class.disabled]="field.disabled" for="{{ field.id }}"
-                >{{ field.label }}:</label
-              >
+              <label [for]="field.id">{{ field.label }}:</label>
               <input
-                type="{{ field.type }}"
-                id="{{ field.id }}"
-                name="{{ field.id }}"
-                [disabled]="field.disabled"
+                [type]="field.type"
+                [id]="field.id"
+                [formControlName]="field.id"
+                [class.is-invalid]="
+                  productForm.get(field.id)?.invalid && productForm.get(field.id)?.touched
+                "
               />
-              @if (isInvalid('id')) {
-                <small class="error-msg">ID es obligatorio (min 3 caracteres)</small>
+              @if (isInvalid(field.id)) {
+                <small class="error-msg">{{ getErrorMessage(field.id, productForm) }}</small>
               }
             </div>
           }
@@ -75,6 +80,7 @@ import { map } from 'rxjs';
       max-width: 800px;
       min-height: 50vh;
       margin: 0 auto;
+      margin-bottom: 100px;
       background-color: var(--main-light-color);
     }
 
@@ -97,6 +103,14 @@ import { map } from 'rxjs';
       padding: 0 32px 32px;
     }
 
+    .is-invalid {
+      border-color: var(--color-text-error);
+    }
+
+    .error-msg {
+      color: var(--color-text-error);
+    }
+
     @media (max-width: 768px) {
       .form-body {
         grid-template-columns: 1fr;
@@ -110,21 +124,32 @@ export class Product implements OnInit {
   private readonly router = inject(Router);
   private readonly productService = inject(ProductService);
 
+  private readonly isEditing = signal(false);
+
+  getErrorMessage = getErrorMessage;
+
   ngOnInit() {
-    const id = this.route.snapshot.paramMap.get('id');
+    this.validateReleaseDate();
+    this.productForm.get('date_revision')?.disable();
+    this.productForm.updateValueAndValidity();
+
+    const id = this.route.snapshot.queryParamMap.get('id');
 
     if (id) {
+      this.isEditing.set(true);
+      this.productForm.get('id')?.disable();
       this.productService
         .getProducts()
         .pipe(map((res) => res.data.find((p) => p.id === id)))
         .subscribe((product) => {
+          console.log('product: ', product);
           if (product) {
             const { date_release, date_revision, ...rest } = product;
 
             this.productForm.patchValue({
               ...rest,
-              date_release: date_release.toISOString().split('T')[0],
-              date_revision: date_revision.toISOString().split('T')[0],
+              date_release: date_release,
+              date_revision: date_revision,
             });
           } else {
             console.error('Producto no encontrado');
@@ -134,64 +159,95 @@ export class Product implements OnInit {
     }
   }
 
-  fields = [
-    {
-      id: 'id',
-      label: 'ID',
-      type: 'text',
-      disabled: true,
-    },
-    {
-      id: 'name',
-      label: 'Nombre',
-      type: 'text',
-      disabled: false,
-    },
-    {
-      id: 'description',
-      label: 'Descripción',
-      type: 'text',
-      disabled: false,
-    },
-    {
-      id: 'logo',
-      label: 'Logo',
-      type: 'text',
-      disabled: false,
-    },
-    {
-      id: 'date_release',
-      label: 'Fecha de liberación',
-      type: 'date',
-      disabled: false,
-    },
-    {
-      id: 'date_revision',
-      label: 'Fecha de revisión',
-      type: 'date',
-      disabled: false,
-    },
-  ];
+  fields = productFields;
 
   protected productForm = this.fb.group({
-    id: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(10)]],
+    id: [
+      '',
+      [Validators.required, Validators.minLength(3), Validators.maxLength(10)],
+      productIdAsyncValidator(this.productService),
+    ],
     name: ['', [Validators.required, Validators.minLength(5), Validators.maxLength(100)]],
     description: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(200)]],
-    logo: [''],
-    date_release: ['', [Validators.required]],
+    logo: ['', Validators.required],
+    date_release: ['', [Validators.required, futureDateValidator()]],
     date_revision: ['', Validators.required],
   });
 
   onSubmit(): void {
     if (this.productForm.valid) {
-      console.log('Datos del producto:', this.productForm.value);
+      if (this.isEditing()) {
+        this.productService
+          .updateProduct({
+            id: this.productForm.get('id')?.value!,
+            name: this.productForm.value.name!,
+            description: this.productForm.value.description!,
+            logo: this.productForm.value.logo!,
+            date_release: this.productForm.value.date_release!,
+            date_revision: this.productForm.get('date_revision')?.value!,
+          })
+          .subscribe({
+            next: () => {
+              this.router.navigate(['/products']);
+            },
+            error: (error) => {
+              alert('Error al actualizar el producto: ' + error.message);
+            },
+          });
+      } else {
+        this.productService
+          .addProduct({
+            id: this.productForm.get('id')?.value!,
+            name: this.productForm.value.name!,
+            description: this.productForm.value.description!,
+            logo: this.productForm.value.logo!,
+            date_release: this.productForm.value.date_release!,
+            date_revision: this.productForm.get('date_revision')?.value!,
+          })
+          .subscribe({
+            next: () => {
+              this.router.navigate(['/products']);
+            },
+            error: (error) => {
+              alert('Error al agregar el producto: ' + error.message);
+            },
+          });
+      }
     } else {
       this.productForm.markAllAsTouched();
     }
   }
 
   onReset(): void {
-    this.productForm.reset();
+    if (this.isEditing()) {
+      this.productForm.get('name')?.reset();
+      this.productForm.get('description')?.reset();
+      this.productForm.get('logo')?.reset();
+      this.productForm.get('date_release')?.reset();
+      this.productForm.get('date_revision')?.reset();
+    } else {
+      this.productForm.reset();
+    }
+  }
+
+  formatDateToYMD = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+
+    return `${year}/${month}/${day}`;
+  };
+
+  validateReleaseDate(): void {
+    this.productForm.get('date_release')?.valueChanges.subscribe((value) => {
+      if (this.productForm.get('date_release')?.valid) {
+        const releaseDate = new Date(value as string);
+        releaseDate.setFullYear(releaseDate.getFullYear() + 1);
+
+        this.productForm.get('date_revision')?.setValue(releaseDate.toISOString().split('T')[0]);
+        this.productForm.updateValueAndValidity();
+      }
+    });
   }
 
   isInvalid(controlName: string): boolean {

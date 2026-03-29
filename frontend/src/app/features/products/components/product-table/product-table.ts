@@ -117,6 +117,7 @@ export class ProductTable {
 
   products = input<Product[]>([]);
   displayedProducts = computed(() => this.products().slice(0, parseInt(this.selectedOption(), 10)));
+
   onOptionSelected(selectedOptionId: string) {
     this.selectedOption.set(selectedOptionId);
   }

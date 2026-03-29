@@ -114,12 +114,12 @@ const products = [
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ProductList implements OnInit {
+export class ProductList {
   protected readonly producstService = inject(ProductService);
 
   products = toSignal(
     this.producstService.getProducts().pipe(
-      map((res) => products),
+      map((res) => res.data),
       catchError((error) => {
         console.error('Error cargando productos:', error);
         return of([]);
@@ -129,8 +129,4 @@ export class ProductList implements OnInit {
       initialValue: [],
     },
   );
-
-  ngOnInit(): void {
-    console.log('res: ', this.products());
-  }
 }

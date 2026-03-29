@@ -1,11 +1,21 @@
-import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 import { Product } from '../../models/product.interface';
 import { DatePipe } from '@angular/common';
 import { Dropdown, Option } from '@app/shared/components/dropdown/dropdown';
+import { ActionEvent, ActionsBtn } from '@app/shared/components/actions-btn/actions-btn';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-product-table',
-  imports: [DatePipe, Dropdown],
+  imports: [DatePipe, Dropdown, ActionsBtn],
   template: `<div class="table-container">
     <table>
       <thead>
@@ -15,7 +25,7 @@ import { Dropdown, Option } from '@app/shared/components/dropdown/dropdown';
           <th scope="col">Descripción</th>
           <th scope="col">Fecha de liberación</th>
           <th scope="col">Fecha de reestructuración</th>
-          <!-- <th scope="col">Acciones</th> -->
+          <th scope="col"></th>
         </tr>
       </thead>
       <tbody>
@@ -29,10 +39,12 @@ import { Dropdown, Option } from '@app/shared/components/dropdown/dropdown';
               <td>{{ product.description }}</td>
               <td>{{ product.date_release | date: 'dd/MM/yyyy' }}</td>
               <td>{{ product.date_revision | date: 'dd/MM/yyyy' }}</td>
-              <!-- <td>
-                <button (click)="onEdit(product)">Editar</button>
-                <button (click)="onDelete(product.id)">Borrar</button>
-              </td> -->
+              <td>
+                <app-actions-btn
+                  (selectedAction)="onAction($event)"
+                  [buttonId]="product.id"
+                ></app-actions-btn>
+              </td>
             </tr>
           }
         } @else {
@@ -106,8 +118,8 @@ import { Dropdown, Option } from '@app/shared/components/dropdown/dropdown';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProductTable {
-  userEdited = output<Product>();
-  userDeleted = output<string>();
+  private readonly router = inject(Router);
+
   selectedOption = signal<string>('5');
 
   options: Option[] = ['5', '10', '20'].map((option) => ({
@@ -122,11 +134,21 @@ export class ProductTable {
     this.selectedOption.set(selectedOptionId);
   }
 
-  // onEdit(product: Product): void {
-  //   this.userEdited.emit(product);
-  // }
+  onAction(selectedAction: ActionEvent): void {
+    if (selectedAction.type === 'edit') {
+      this.onEdit(selectedAction.id);
+    } else if (selectedAction.type === 'delete') {
+      this.onDelete(selectedAction.id);
+    }
+  }
 
-  // onDelete(id: string): void {
-  //   this.userDeleted.emit(id);
-  // }
+  onEdit(productId: string) {
+    this.router.navigate(['/products/edit'], {
+      queryParams: { id: productId },
+    });
+  }
+
+  onDelete(productId: string) {
+
+  }
 }

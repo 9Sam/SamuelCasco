@@ -1,10 +1,11 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { Product } from '../../models/product.interface';
 import { DatePipe } from '@angular/common';
+import { Dropdown, Option } from '@app/shared/components/dropdown/dropdown';
 
 @Component({
   selector: 'app-product-table',
-  imports: [DatePipe],
+  imports: [DatePipe, Dropdown],
   template: `<div class="table-container">
     <table>
       <thead>
@@ -19,7 +20,7 @@ import { DatePipe } from '@angular/common';
       </thead>
       <tbody>
         @if (products().length > 0) {
-          @for (product of products(); track product.id) {
+          @for (product of displayedProducts(); track product.id) {
             <tr>
               <td>
                 <img [src]="product.logo" [alt]="product.name" width="48" />
@@ -43,16 +44,12 @@ import { DatePipe } from '@angular/common';
         }
       </tbody>
     </table>
+    <div class="table-footer">
+      <span>{{ displayedProducts().length }} Resultados</span>
+      <app-dropdown [options]="options" (optionSelected)="onOptionSelected($event)"></app-dropdown>
+    </div>
   </div>`,
   styles: `
-    .table-container {
-      overflow-x: auto;
-      margin-top: 20px;
-      padding: 20px;
-      width: 100%;
-      background: var(--main-light-color);
-    }
-
     table {
       width: 100%;
       border-collapse: collapse;
@@ -89,14 +86,41 @@ import { DatePipe } from '@angular/common';
     tbody tr:hover {
       background-color: #f1f1f1;
     }
+
+    .table-container {
+      overflow-x: auto;
+      margin-top: 20px;
+      padding: 20px;
+      width: 100%;
+      background: var(--main-light-color);
+    }
+
+    .table-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 0;
+      margin-top: 20px;
+    }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProductTable {
   userEdited = output<Product>();
   userDeleted = output<string>();
+  selectedOption = signal<string>('5');
+
+  options: Option[] = ['5', '10', '20'].map((option) => ({
+    id: parseInt(option, 10),
+    name: option,
+  }));
 
   products = input<Product[]>([]);
+  displayedProducts = computed(() => this.products().slice(0, parseInt(this.selectedOption(), 10)));
+  onOptionSelected(selectedOptionId: string) {
+    this.selectedOption.set(selectedOptionId);
+  }
+
   // onEdit(product: Product): void {
   //   this.userEdited.emit(product);
   // }

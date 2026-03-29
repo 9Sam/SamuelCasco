@@ -1,8 +1,16 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  OnInit,
+  signal,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ProductService } from '../services/product.service';
-import { catchError, map, of } from 'rxjs';
+import { catchError, delay, map, of, startWith } from 'rxjs';
 import { ProductTable } from '../components/product-table/product-table';
+import { Skeleton } from '@app/shared/components/skeleton/skeleton';
 
 const products = [
   {
@@ -100,9 +108,15 @@ const products = [
 
 @Component({
   selector: 'app-product-list',
-  imports: [ProductTable],
+  imports: [ProductTable, Skeleton],
   template: `<div class="table-layout">
-    <app-product-table [products]="products()"></app-product-table>
+    @if (isLoading()) {
+      <div>
+        <app-skeleton width="100%" height="400px"></app-skeleton>
+      </div>
+    } @else {
+      <app-product-table [products]="products()"></app-product-table>
+    }
   </div>`,
   styles: `
     .table-layout {
@@ -117,16 +131,15 @@ const products = [
 export class ProductList {
   protected readonly producstService = inject(ProductService);
 
-  products = toSignal(
+  private productsState = toSignal(
     this.producstService.getProducts().pipe(
-      map((res) => res.data),
-      catchError((error) => {
-        console.error('Error cargando productos:', error);
-        return of([]);
-      }),
+      map((res) => ({ loading: false, data: res.data, error: null })),
+      startWith({ loading: true, data: [], error: null }),
+      catchError((error) => of({ loading: false, data: [], error })),
     ),
-    {
-      initialValue: [],
-    },
+    { initialValue: { loading: true, data: [], error: null } },
   );
+
+  products = computed(() => this.productsState().data);
+  isLoading = computed(() => this.productsState().loading);
 }

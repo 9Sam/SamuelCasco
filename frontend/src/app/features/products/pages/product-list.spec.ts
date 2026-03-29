@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ProductList } from './product-list';
-import { of, throwError } from 'rxjs';
+import { Subject } from 'rxjs';
 import { ProductService } from '../services/product.service';
 
 const productsRes = {
@@ -18,14 +18,19 @@ const productsRes = {
 };
 
 const productsServiceStub = {
-  getProducts: vi.fn().mockReturnValue(of(productsRes)),
+  getProducts: vi.fn(),
 };
 
 describe('ProductList', () => {
   let component: ProductList;
   let fixture: ComponentFixture<ProductList>;
+  let getProductsSubject: Subject<any>;
 
   beforeEach(async () => {
+    productsServiceStub.getProducts.mockReset();
+    getProductsSubject = new Subject<any>();
+    productsServiceStub.getProducts.mockReturnValue(getProductsSubject);
+
     await TestBed.configureTestingModule({
       imports: [ProductList],
       providers: [{ provide: ProductService, useValue: productsServiceStub }],
@@ -33,29 +38,42 @@ describe('ProductList', () => {
 
     fixture = TestBed.createComponent(ProductList);
     component = fixture.componentInstance;
-    await fixture.whenStable();
   });
 
   it('should create', () => {
+    getProductsSubject.next(productsRes);
+    getProductsSubject.complete();
+    fixture.detectChanges();
     expect(component).toBeTruthy();
   });
 
-  it('should load products on init', () => {
-    vi.spyOn(component['producstService'], 'getProducts').mockReturnValue(of(productsRes as any));
+  it('should load products on init', async () => {
+    getProductsSubject.next(productsRes);
+    getProductsSubject.complete();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
     expect(component.products()).toEqual(productsRes.data);
+  });
+
+  it('should display the skeleton while loading', () => {
+    fixture.detectChanges();
+
+    expect(component.isLoading()).toBe(true);
+
+    getProductsSubject.next(productsRes);
+    getProductsSubject.complete();
+    fixture.detectChanges();
+
+    expect(component.isLoading()).toBe(false);
   });
 
   it('should handle error when loading products', () => {
     const mockError = new Error('Failed to load');
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-    vi.spyOn(productsServiceStub, 'getProducts').mockReturnValue(throwError(() => mockError));
-
-    const fixture = TestBed.createComponent(ProductList);
-    const component = fixture.componentInstance;
+    getProductsSubject.error(mockError);
     fixture.detectChanges();
 
-    expect(consoleErrorSpy).toHaveBeenCalledWith('Error cargando productos:', mockError);
     expect(component.products()).toEqual([]);
+    expect(component.isLoading()).toBe(false);
   });
 });

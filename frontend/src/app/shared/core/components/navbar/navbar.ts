@@ -12,8 +12,9 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
       justify-content: center;
       align-items: center;
       padding: 10px;
-      background-color: #ffffff;
-      box-shadow: rgba(149, 157, 165, 0.2) 0px 8px 24px;
+      margin-bottom: 30px;
+      background-color: var(--main-light-color);
+      box-shadow: rgba(149, 157, 165, 0.1) 0px 8px 16px;
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,

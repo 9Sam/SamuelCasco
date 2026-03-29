@@ -5,6 +5,10 @@ export const routes: Routes = [
   {
     path: '',
     component: MainLayout,
-    children: [],
+    loadChildren: () => import('./features/products/products.route').then((m) => m.productRoutes),
+  },
+  {
+    path: '**',
+    redirectTo: '',
   },
 ];

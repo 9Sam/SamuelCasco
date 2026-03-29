@@ -25,4 +25,4 @@ COPY --from=build --chown=appuser:appgroup /app ./
 ENV NODE_ENV=production \
     NODE_OPTIONS="--enable-source-maps"
 USER appuser
-ENTRYPOINT ["node", "dist/ main.js"]
+ENTRYPOINT ["node", "dist/main.js"]

@@ -10,7 +10,9 @@ Para iniciar el proyecto con los comandos por defecto habría que ejecutar lo si
 
 > NOTA: Para ejecutar este proyecto de forma local es necesario tener instalado **pnpm.**
 
-Instalar las dependencias requeridas.
+Acceder a la ruta correspondiente.
+
+Instalar las dependencias requeridas para cada proyecto ejecutando:
 
 ```powershell
 pnpm install
@@ -20,6 +22,12 @@ Inicializar la app frontend
 
 ```powershell
 pnpm start
+```
+
+Inicializar la app backend
+
+```powershell
+pnpm start:dev
 ```
 
 El proyecto estará disponible en la dirección http://localhost:80

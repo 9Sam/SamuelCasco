@@ -1,16 +1,10 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  inject,
-  OnInit,
-  signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ProductService } from '../services/product.service';
-import { catchError, delay, map, of, startWith } from 'rxjs';
+import { catchError, map, of, startWith } from 'rxjs';
 import { ProductTable } from '../components/product-table/product-table';
 import { Skeleton } from '@app/shared/components/skeleton/skeleton';
+import { Searchbar } from '@app/shared/components/searchbar/searchbar';
 
 const products = [
   {
@@ -108,16 +102,17 @@ const products = [
 
 @Component({
   selector: 'app-product-list',
-  imports: [ProductTable, Skeleton],
-  template: `<div class="table-layout">
-    @if (isLoading()) {
-      <div>
-        <app-skeleton width="100%" height="400px"></app-skeleton>
-      </div>
-    } @else {
-      <app-product-table [products]="products()"></app-product-table>
-    }
-  </div>`,
+  imports: [ProductTable, Skeleton, Searchbar],
+  template: ` <app-searchbar [(value)]="searchTerm"></app-searchbar>
+    <div class="table-layout">
+      @if (isLoading()) {
+        <div>
+          <app-skeleton width="100%" height="400px"></app-skeleton>
+        </div>
+      } @else {
+        <app-product-table [products]="filteredProducts()"></app-product-table>
+      }
+    </div>`,
   styles: `
     .table-layout {
       display: block;
@@ -130,6 +125,7 @@ const products = [
 })
 export class ProductList {
   protected readonly producstService = inject(ProductService);
+  searchTerm = signal('');
 
   private productsState = toSignal(
     this.producstService.getProducts().pipe(
@@ -139,6 +135,11 @@ export class ProductList {
     ),
     { initialValue: { loading: true, data: [], error: null } },
   );
+
+  filteredProducts = computed(() => {
+    const term = this.searchTerm().toLowerCase();
+    return this.products().filter((p) => p.name.toLowerCase().includes(term));
+  });
 
   products = computed(() => this.productsState().data);
   isLoading = computed(() => this.productsState().loading);

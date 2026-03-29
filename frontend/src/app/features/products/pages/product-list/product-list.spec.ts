@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ProductList } from './product-list';
 import { Subject } from 'rxjs';
-import { ProductService } from '../services/product.service';
+import { ProductService } from '../../services/product.service';
 
 const productsRes = {
   data: [

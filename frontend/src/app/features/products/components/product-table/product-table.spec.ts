@@ -2,6 +2,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ProductTable } from './product-table';
 import { By } from '@angular/platform-browser';
 import { Dropdown } from '@app/shared/components/dropdown/dropdown';
+import { Router } from '@angular/router';
+import { ActionEvent } from '@app/shared/components/actions-btn/actions-btn';
 
 const mockProducts = [
   {
@@ -54,6 +56,10 @@ const mockProducts = [
   },
 ];
 
+const routerMock = {
+  navigate: vi.fn(),
+};
+
 describe('ProductTable', () => {
   let component: ProductTable;
   let fixture: ComponentFixture<ProductTable>;
@@ -61,6 +67,12 @@ describe('ProductTable', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [ProductTable],
+      providers: [
+        {
+          provide: Router,
+          useValue: routerMock,
+        },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ProductTable);
@@ -92,6 +104,14 @@ describe('ProductTable', () => {
     expect(component.displayedProducts()).toEqual(mockProducts.slice(0, 3));
   });
 
+  it('contain the actions button for each product', () => {
+    fixture.componentRef.setInput('products', mockProducts);
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const actionButtons = compiled.querySelectorAll('app-actions-btn');
+    expect(actionButtons.length).toBe(5);
+  });
+
   it('should display and update the results count correctly', () => {
     fixture.componentRef.setInput('products', mockProducts);
     fixture.detectChanges();
@@ -101,12 +121,38 @@ describe('ProductTable', () => {
     expect(resultsCount?.textContent).toContain('5 Resultados');
   });
 
-  it('debería actualizar el límite de productos cuando se selecciona una opción', () => {
+  it('should update the displayed products when an option is selected', () => {
     const dropdown = fixture.debugElement.query(By.directive(Dropdown)).componentInstance;
 
     dropdown.optionSelected.emit(20);
     fixture.detectChanges();
 
     expect(component.selectedOption()).toBe(20);
+  });
+
+  it('should call the right method on action selection', () => {
+    const actionEvent: ActionEvent = { type: 'edit', id: '1' };
+
+    const editSpy = vi.spyOn(component, 'onEdit');
+    const deleteSpy = vi.spyOn(component, 'onDelete');
+
+    component.onAction(actionEvent);
+
+    expect(editSpy).toHaveBeenCalledWith('1');
+    expect(deleteSpy).not.toHaveBeenCalled();
+  });
+
+  it('should navigate to edit page on edit action', () => {
+    vi.spyOn(routerMock, 'navigate');
+    component.onEdit('1');
+    expect(routerMock.navigate).toHaveBeenCalledWith(['/products/edit'], {
+      queryParams: { id: '1' },
+    });
+  });
+
+  it('should log delete action on delete', () => {
+    const consoleSpy = vi.spyOn(console, 'log');
+    component.onDelete('1');
+    expect(consoleSpy).toHaveBeenCalledWith('delete product');
   });
 });

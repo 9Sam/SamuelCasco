@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { environment } from 'environments/environment';
-import { catchError, map, Observable } from 'rxjs';
+import { catchError, Observable } from 'rxjs';
 import { AddProductResponse, ProductsResponse } from '../interfaces/responses.interface';
 import { Product } from '../models/product.interface';
 
@@ -14,14 +14,6 @@ export class ProductService {
 
   getProducts(): Observable<ProductsResponse> {
     return this.httpClient.get<ProductsResponse>(`${this.BASE_URL}/products`).pipe(
-      map((res) => ({
-        ...res,
-        data: res.data.map((product) => ({
-          ...product,
-          date_release: product.date_release,
-          date_revision: product.date_revision,
-        })),
-      })),
       catchError((error) => {
         throw error;
       }),

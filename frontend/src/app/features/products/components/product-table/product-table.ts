@@ -148,5 +148,7 @@ export class ProductTable {
     });
   }
 
-  onDelete(productId: string) {}
+  onDelete(productId: string) {
+    console.log('delete product');
+  }
 }

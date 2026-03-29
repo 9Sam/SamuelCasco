@@ -135,7 +135,10 @@ export class Product implements OnInit {
 
     const id = this.route.snapshot.queryParamMap.get('id');
 
+    console.log('id: ', id);
+
     if (id) {
+      console.log('enters: ');
       this.isEditing.set(true);
       this.productForm.get('id')?.disable();
       this.productService
